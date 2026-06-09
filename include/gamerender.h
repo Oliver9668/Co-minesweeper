@@ -17,6 +17,8 @@ private:
 
     COLORREF bgColor;
     COLORREF cellColor;
+    COLORREF cellHighlight;
+    COLORREF cellShadow;
     COLORREF revealedColor;
     COLORREF flagColor;
     COLORREF mineColor;

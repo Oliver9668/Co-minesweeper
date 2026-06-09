@@ -7,10 +7,12 @@ GameRender::GameRender(Minesweeper *g, int cell, int mar)
       lastActionR(-1), lastActionC(-1)
 {
     windowW = margin * 2 + game->cols * cellSize;
-    windowH = margin * 2 + game->rows * cellSize + infoBarHeight;
+    windowH = margin * 2 + game->rows * cellSize;
 
     bgColor = EGERGB(245, 222, 179);
     cellColor = EGERGB(210, 180, 140);
+    cellHighlight = EGERGB(240, 210, 170);
+    cellShadow = EGERGB(155, 125, 88);
     revealedColor = EGERGB(235, 230, 200);
     flagColor = EGERGB(220, 60, 60);
     mineColor = EGERGB(50, 50, 50);
@@ -41,22 +43,21 @@ void GameRender::drawCell(int r, int c)
 {
     int x = margin + c * cellSize;
     int y = margin + r * cellSize;
-    int pad = 2;
 
     if (game->isRevealed[r][c])
     {
         setfillcolor(revealedColor);
-        bar(x + pad, y + pad, x + cellSize - pad, y + cellSize - pad);
+        bar(x, y, x + cellSize, y + cellSize);
 
         if (game->isMine[r][c])
         {
             setfillcolor(EGERGB(255, 80, 80));
-            bar(x + pad, y + pad, x + cellSize - pad, y + cellSize - pad);
+            bar(x, y, x + cellSize, y + cellSize);
             settextcolor(mineColor);
             setbkmode(TRANSPARENT);
             setfont(cellSize - 4, 0, "Arial");
-            int tx = x + (cellSize - textwidth('*')) / 2;
-            int ty = y + (cellSize - textheight('*')) / 2 - 2;
+            int tx = x + (cellSize - textwidth('*')) / 2 + 1;
+            int ty = y + (cellSize - textheight('*')) / 2;
             outtextxy(tx, ty, '*');
         }
         else if (game->adjacentMines[r][c] > 0)
@@ -66,15 +67,26 @@ void GameRender::drawCell(int r, int c)
             setbkmode(TRANSPARENT);
             setfont(cellSize - 4, 0, "Arial");
             char str[2] = {char('0' + num), '\0'};
-            int tx = x + (cellSize - textwidth(str)) / 2;
-            int ty = y + (cellSize - textheight(str)) / 2 - 2;
+            int tx = x + (cellSize - textwidth(str)) / 2 + 1;
+            int ty = y + (cellSize - textheight(str)) / 2;
             outtextxy(tx, ty, str);
         }
     }
     else
     {
+        // 3D 凸起效果的格子底色
         setfillcolor(cellColor);
-        bar(x + pad, y + pad, x + cellSize - pad, y + cellSize - pad);
+        bar(x, y, x + cellSize, y + cellSize);
+
+        // 高亮边（左上 2px）：模拟光源
+        setfillcolor(cellHighlight);
+        bar(x, y, x + cellSize, y + 2);
+        bar(x, y, x + 2, y + cellSize);
+
+        // 阴影边（右下 2px）：模拟深度
+        setfillcolor(cellShadow);
+        bar(x, y + cellSize - 2, x + cellSize, y + cellSize);
+        bar(x + cellSize - 2, y, x + cellSize, y + cellSize);
 
         if (game->isFlagged[r][c])
         {
@@ -145,7 +157,6 @@ void GameRender::render()
 {
     cleardevice();
     drawBoard();
-    drawInfoBar();
 }
 
 bool GameRender::handleMouse(mouse_msg msg, bool &hitMine, bool &won)
@@ -171,6 +182,8 @@ bool GameRender::handleMouse(mouse_msg msg, bool &hitMine, bool &won)
                 hitMine = game->revealAdjacent(r, c);
                 won = game->checkWin();
                 lastClickTime = 0;
+                lastClickR = -1;
+                lastClickC = -1;
                 lastActionR = r;
                 lastActionC = c;
                 lastActionType = 'C';
@@ -182,6 +195,10 @@ bool GameRender::handleMouse(mouse_msg msg, bool &hitMine, bool &won)
             return false;
         }
 
+        // 点击未翻开格子，重置双击状态
+        lastClickTime = 0;
+        lastClickR = -1;
+        lastClickC = -1;
         if (!game->isRevealed[r][c])
             hitMine = game->reveal(r, c);
         won = game->checkWin();
@@ -193,6 +210,10 @@ bool GameRender::handleMouse(mouse_msg msg, bool &hitMine, bool &won)
 
     if (msg.is_right())
     {
+        // 右键操作，重置双击状态
+        lastClickTime = 0;
+        lastClickR = -1;
+        lastClickC = -1;
         game->toggleFlag(r, c);
         won = game->checkWin();
         lastActionR = r;
@@ -209,7 +230,7 @@ void GameRender::showMessage(const char *text)
     int msgW = textwidth(text) + 40;
     int msgH = textheight(text) + 20;
     int msgX = (windowW - msgW) / 2;
-    int msgY = (windowH - msgH) / 2 - infoBarHeight / 2;
+    int msgY = (windowH - msgH) / 2;
 
     setfillcolor(EGERGB(255, 255, 255));
     setlinecolor(borderColor);

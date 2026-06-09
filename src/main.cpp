@@ -36,8 +36,6 @@ static void runSinglePlayer(int rows, int cols, int mines)
                 }
                 if (hitMine)
                 {
-                    game.revealAll();
-                    render.render();
                     render.showMessage("Game Over!");
                     delay_ms(2000);
                     break;
