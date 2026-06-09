@@ -13,6 +13,8 @@ const int dy[8] = {-1, 0, 1, -1, 1, -1, 0, 1};
 
 class Minesweeper
 {
+    friend class GameRender;
+
 private:
     int rows, cols, mines;
     vector<vector<bool>> isMine;       // 是否有雷
