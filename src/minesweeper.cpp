@@ -209,6 +209,16 @@ bool Minesweeper::checkWin() const
     return true;
 }
 
+int Minesweeper::getFlagCount() const
+{
+    int count = 0;
+    for (int i = 0; i < rows; ++i)
+        for (int j = 0; j < cols; ++j)
+            if (isFlagged[i][j])
+                ++count;
+    return count;
+}
+
 bool Minesweeper::isGameOver() const
 {
     return gameOver;

@@ -12,8 +12,14 @@ private:
     int cellSize;
     int margin;
     int infoBarHeight;
+    int toolbarHeight;
+    int gridY;
     int windowW;
     int windowH;
+    int screenW;
+    int screenH;
+    int offsetX;
+    int offsetY;
 
     COLORREF bgColor;
     COLORREF cellColor;
@@ -24,6 +30,9 @@ private:
     COLORREF mineColor;
     COLORREF borderColor;
     COLORREF numberColors[8];
+
+    // 工具栏退出按钮区域
+    int exitBtnX, exitBtnY, exitBtnW, exitBtnH;
 
     // 双击检测
     clock_t lastClickTime;
@@ -39,15 +48,16 @@ private:
 
     void drawCell(int r, int c);
     void drawBoard();
+    void drawToolbar();
     void drawInfoBar();
 
 public:
-    GameRender(Minesweeper *g, int cell = 30, int mar = 20);
+    GameRender(Minesweeper *g, int cell = 30, int mar = 20, int scrW = 1000, int scrH = 650);
     ~GameRender();
 
     void init();
     void render();
-    bool handleMouse(mouse_msg msg, bool &hitMine, bool &won);
+    bool handleMouse(mouse_msg msg, bool &hitMine, bool &won, bool &exitRequested);
     void showMessage(const char *text);
 
     int getWindowWidth() const { return windowW; }

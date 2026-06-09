@@ -6,10 +6,25 @@
 
 using namespace std;
 
+static const int SCR_W = 1000;
+static const int SCR_H = 650;
+
+static void drawConnectionMsg(const char *line1, const char *line2)
+{
+    cleardevice();
+    setbkcolor(EGERGB(245, 222, 179));
+    setfont(22, 0, "Arial");
+    settextcolor(BLACK);
+    setbkmode(TRANSPARENT);
+    outtextxy((SCR_W - textwidth(line1)) / 2, 280, line1);
+    if (line2)
+        outtextxy((SCR_W - textwidth(line2)) / 2, 315, line2);
+}
+
 static void runSinglePlayer(int rows, int cols, int mines)
 {
     Minesweeper game(rows, cols, mines);
-    GameRender render(&game, 30, 20);
+    GameRender render(&game, 30, 20, SCR_W, SCR_H);
     render.init();
     render.render();
     delay_ms(10);
@@ -18,26 +33,46 @@ static void runSinglePlayer(int rows, int cols, int mines)
         getmouse();
 
     mouse_msg msg = {0};
-    bool hitMine = false, won = false;
+    bool hitMine = false, won = false, exitRequested = false;
 
     while (!game.isGameOver())
     {
         if (mousemsg())
         {
             msg = getmouse();
-            if (render.handleMouse(msg, hitMine, won))
+            if (render.handleMouse(msg, hitMine, won, exitRequested))
             {
                 render.render();
+                if (exitRequested)
+                    break;
                 if (won)
                 {
                     render.showMessage("You Win!");
-                    delay_ms(2000);
+                    while (mousemsg()) getmouse();
+                    while (true)
+                    {
+                        if (mousemsg())
+                        {
+                            mouse_msg m = getmouse();
+                            if (m.msg == mouse_msg_up) break;
+                        }
+                        delay_ms(10);
+                    }
                     break;
                 }
                 if (hitMine)
                 {
                     render.showMessage("Game Over!");
-                    delay_ms(2000);
+                    while (mousemsg()) getmouse();
+                    while (true)
+                    {
+                        if (mousemsg())
+                        {
+                            mouse_msg m = getmouse();
+                            if (m.msg == mouse_msg_up) break;
+                        }
+                        delay_ms(10);
+                    }
                     break;
                 }
             }
@@ -47,10 +82,8 @@ static void runSinglePlayer(int rows, int cols, int mines)
             delay_ms(1);
         }
     }
-    closegraph();
 }
 
-// 执行操作并检测结果
 static bool doAction(Minesweeper &game, char type, int r, int c,
                       bool &hitMine, bool &won)
 {
@@ -74,7 +107,6 @@ static bool doAction(Minesweeper &game, char type, int r, int c,
     return true;
 }
 
-// 发送操作
 static void sendOp(Network &net, char type, int r, int c)
 {
     char buf[64];
@@ -82,34 +114,24 @@ static void sendOp(Network &net, char type, int r, int c)
     net.sendMsg(buf);
 }
 
-// 联机主机
 static void runHost(int rows, int cols, int mines)
 {
     Network net;
     if (!net.host(12345))
     {
-        closegraph();
+        drawConnectionMsg("Failed to host.", "Click to return...");
+        while (!mousemsg()) delay_ms(10);
+        getmouse();
         return;
     }
 
-    // 等待客机
+    drawConnectionMsg("Waiting for player...", nullptr);
+    while (!net.isConnected())
     {
-        initgraph(400, 200);
-        setbkcolor(EGERGB(245, 222, 179));
-        setfont(20, 0, "Arial");
-        settextcolor(BLACK);
-        setbkmode(TRANSPARENT);
-        const char *msg = "Waiting for player...";
-        outtextxy((400 - textwidth(msg)) / 2, 80, msg);
-        while (!net.isConnected())
-        {
-            net.hasData();
-            delay_ms(50);
-        }
-        closegraph();
+        net.hasData();
+        delay_ms(50);
     }
 
-    // 发送棋盘配置和雷位
     vector<int> mineRows, mineCols;
     {
         char buf[64];
@@ -128,13 +150,12 @@ static void runHost(int rows, int cols, int mines)
         net.sendMsg("END");
     }
 
-    // 用相同雷位重建棋盘
     Minesweeper game(rows, cols, 0);
     for (size_t i = 0; i < mineRows.size(); ++i)
         game.setMine(mineRows[i], mineCols[i]);
     game.computeAdjacent();
 
-    GameRender render(&game, 30, 20);
+    GameRender render(&game, 30, 20, SCR_W, SCR_H);
     render.init();
     render.render();
     delay_ms(10);
@@ -143,19 +164,19 @@ static void runHost(int rows, int cols, int mines)
         getmouse();
 
     mouse_msg msg = {0};
-    bool hitMine = false, won = false;
+    bool hitMine = false, won = false, exitRequested = false;
 
     while (!game.isGameOver())
     {
         bool redraw = false;
 
-        // 本地操作
         if (mousemsg())
         {
             msg = getmouse();
             bool localHit = false, localWon = false;
-            if (render.handleMouse(msg, localHit, localWon))
+            if (render.handleMouse(msg, localHit, localWon, exitRequested))
             {
+                if (exitRequested) break;
                 int r = render.getLastR(), c = render.getLastC();
                 char type = render.getLastActionType();
                 sendOp(net, type, r, c);
@@ -174,7 +195,6 @@ static void runHost(int rows, int cols, int mines)
             }
         }
 
-        // 远程操作
         while (net.hasData())
         {
             string line = net.recvMsg();
@@ -205,13 +225,31 @@ static void runHost(int rows, int cols, int mines)
         if (won)
         {
             render.showMessage("You Win!");
-            delay_ms(2000);
+            while (mousemsg()) getmouse();
+            while (true)
+            {
+                if (mousemsg())
+                {
+                    mouse_msg m = getmouse();
+                    if (m.msg == mouse_msg_up) break;
+                }
+                delay_ms(10);
+            }
             break;
         }
         if (hitMine)
         {
             render.showMessage("Game Over!");
-            delay_ms(2000);
+            while (mousemsg()) getmouse();
+            while (true)
+            {
+                if (mousemsg())
+                {
+                    mouse_msg m = getmouse();
+                    if (m.msg == mouse_msg_up) break;
+                }
+                delay_ms(10);
+            }
             break;
         }
 
@@ -220,48 +258,28 @@ static void runHost(int rows, int cols, int mines)
     }
 
     net.disconnect();
-    closegraph();
 }
 
-// 联机客机
 static void runClient(const char *ip)
 {
-    // 连接界面
-    initgraph(500, 300);
-    setbkcolor(EGERGB(245, 222, 179));
-    setfont(20, 0, "Arial");
-    settextcolor(BLACK);
-    setbkmode(TRANSPARENT);
-
-    int cy = 60;
-    {
-        char buf[128];
-        snprintf(buf, sizeof(buf), "Connecting to %s ...", ip);
-        outtextxy((500 - textwidth(buf)) / 2, cy, buf);
-    }
+    char buf[128];
+    snprintf(buf, sizeof(buf), "Connecting to %s ...", ip);
+    drawConnectionMsg(buf, nullptr);
 
     Network net;
     if (!net.join(ip, 12345))
     {
-        settextcolor(EGERGB(200, 0, 0));
-        const char *err = "Connection failed! Check IP / host not running.";
-        outtextxy((500 - textwidth(err)) / 2, 150, err);
-        delay_ms(3000);
-        closegraph();
+        drawConnectionMsg("Connection failed!", "Check IP / host not running. Click to return...");
+        while (!mousemsg()) delay_ms(10);
+        getmouse();
         return;
     }
 
-    cleardevice();
-    settextcolor(BLACK);
-    {
-        const char *ok = "Connected! Syncing board...";
-        outtextxy((500 - textwidth(ok)) / 2, cy, ok);
-    }
+    drawConnectionMsg("Connected! Syncing board...", nullptr);
 
     int rows = 9, cols = 9, mines = 10;
     Minesweeper *game = nullptr;
 
-    // 接收初始数据
     {
         while (true)
         {
@@ -290,10 +308,7 @@ static void runClient(const char *ip)
         }
     }
 
-    closegraph();
-    // 进入游戏
-
-    GameRender render(game, 30, 20);
+    GameRender render(game, 30, 20, SCR_W, SCR_H);
     render.init();
     render.render();
     delay_ms(10);
@@ -302,19 +317,19 @@ static void runClient(const char *ip)
         getmouse();
 
     mouse_msg msg = {0};
-    bool hitMine = false, won = false;
+    bool hitMine = false, won = false, exitRequested = false;
 
     while (!game->isGameOver())
     {
         bool redraw = false;
 
-        // 本地操作
         if (mousemsg())
         {
             msg = getmouse();
             bool localHit = false, localWon = false;
-            if (render.handleMouse(msg, localHit, localWon))
+            if (render.handleMouse(msg, localHit, localWon, exitRequested))
             {
+                if (exitRequested) break;
                 int r = render.getLastR(), c = render.getLastC();
                 char type = render.getLastActionType();
                 sendOp(net, type, r, c);
@@ -333,7 +348,6 @@ static void runClient(const char *ip)
             }
         }
 
-        // 远程操作
         while (net.hasData())
         {
             string line = net.recvMsg();
@@ -364,13 +378,31 @@ static void runClient(const char *ip)
         if (won)
         {
             render.showMessage("You Win!");
-            delay_ms(2000);
+            while (mousemsg()) getmouse();
+            while (true)
+            {
+                if (mousemsg())
+                {
+                    mouse_msg m = getmouse();
+                    if (m.msg == mouse_msg_up) break;
+                }
+                delay_ms(10);
+            }
             break;
         }
         if (hitMine)
         {
             render.showMessage("Game Over!");
-            delay_ms(2000);
+            while (mousemsg()) getmouse();
+            while (true)
+            {
+                if (mousemsg())
+                {
+                    mouse_msg m = getmouse();
+                    if (m.msg == mouse_msg_up) break;
+                }
+                delay_ms(10);
+            }
             break;
         }
 
@@ -380,31 +412,35 @@ static void runClient(const char *ip)
 
     delete game;
     net.disconnect();
-    closegraph();
 }
 
 int main()
 {
-    StartScreen startScreen;
-    startScreen.init();
+    SetConsoleOutputCP(CP_UTF8);
+    initgraph(SCR_W, SCR_H);
 
-    if (!startScreen.show())
+    while (true)
     {
-        startScreen.close();
-        return 0;
+        StartScreen startScreen(SCR_W, SCR_H);
+        startScreen.init();
+
+        if (!startScreen.show())
+        {
+            break;
+        }
+
+        int rows, cols, mines;
+        startScreen.getConfig(rows, cols, mines);
+        int mode = startScreen.getMode();
+
+        if (mode == 1)
+            runHost(rows, cols, mines);
+        else if (mode == 2)
+            runClient(startScreen.getHostIP());
+        else
+            runSinglePlayer(rows, cols, mines);
     }
 
-    int rows, cols, mines;
-    startScreen.getConfig(rows, cols, mines);
-    int mode = startScreen.getMode();
-    startScreen.close();
-
-    if (mode == 1)
-        runHost(rows, cols, mines);
-    else if (mode == 2)
-        runClient(startScreen.getHostIP());
-    else
-        runSinglePlayer(rows, cols, mines);
-
+    closegraph();
     return 0;
 }

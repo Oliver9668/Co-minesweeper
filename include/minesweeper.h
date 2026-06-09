@@ -60,6 +60,9 @@ public:
     // 检查是否胜利（所有非雷格子都已翻开，或者所有雷都被标记）
     bool checkWin() const;
 
+    // 获取当前插旗数
+    int getFlagCount() const;
+
     bool isGameOver() const;
 
     // 打印棋盘

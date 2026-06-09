@@ -1,13 +1,23 @@
 #include <windows.h>
+#include <cstdio>
 #include "gamerender.h"
 
-GameRender::GameRender(Minesweeper *g, int cell, int mar)
+GameRender::GameRender(Minesweeper *g, int cell, int mar, int scrW, int scrH)
     : game(g), cellSize(cell), margin(mar), infoBarHeight(50),
+      toolbarHeight(40), screenW(scrW), screenH(scrH),
       lastClickTime(0), lastClickR(-1), lastClickC(-1),
       lastActionR(-1), lastActionC(-1)
 {
+    gridY = margin + toolbarHeight;
     windowW = margin * 2 + game->cols * cellSize;
-    windowH = margin * 2 + game->rows * cellSize;
+    windowH = margin * 2 + game->rows * cellSize + toolbarHeight;
+
+    offsetX = (screenW - windowW) / 2;
+    offsetY = (screenH - windowH) / 2;
+
+    exitBtnW = 60; exitBtnH = 28;
+    exitBtnX = margin + game->cols * cellSize - exitBtnW;
+    exitBtnY = margin;
 
     bgColor = EGERGB(245, 222, 179);
     cellColor = EGERGB(210, 180, 140);
@@ -34,15 +44,14 @@ GameRender::~GameRender()
 
 void GameRender::init()
 {
-    initgraph(windowW, windowH);
     setbkcolor(bgColor);
     cleardevice();
 }
 
 void GameRender::drawCell(int r, int c)
 {
-    int x = margin + c * cellSize;
-    int y = margin + r * cellSize;
+    int x = offsetX + margin + c * cellSize;
+    int y = offsetY + gridY + r * cellSize;
 
     if (game->isRevealed[r][c])
     {
@@ -74,16 +83,13 @@ void GameRender::drawCell(int r, int c)
     }
     else
     {
-        // 3D 凸起效果的格子底色
         setfillcolor(cellColor);
         bar(x, y, x + cellSize, y + cellSize);
 
-        // 高亮边（左上 2px）：模拟光源
         setfillcolor(cellHighlight);
         bar(x, y, x + cellSize, y + 2);
         bar(x, y, x + 2, y + cellSize);
 
-        // 阴影边（右下 2px）：模拟深度
         setfillcolor(cellShadow);
         bar(x, y + cellSize - 2, x + cellSize, y + cellSize);
         bar(x + cellSize - 2, y, x + cellSize, y + cellSize);
@@ -104,7 +110,6 @@ void GameRender::drawCell(int r, int c)
             int triBottom = triTop + flagH;
             int triMidY = (triTop + triBottom) / 2;
 
-            // 三角旗帜（先画）
             setfillcolor(flagColor);
             setlinecolor(flagColor);
             ege_point pts[3] = {
@@ -114,7 +119,6 @@ void GameRender::drawCell(int r, int c)
             };
             ege_fillpoly(3, pts);
 
-            // 旗杆（后画，盖在旗子上）
             setlinecolor(EGERGB(80, 40, 0));
             line(poleX, poleTop, poleX, poleBottom);
         }
@@ -124,55 +128,99 @@ void GameRender::drawCell(int r, int c)
 void GameRender::drawBoard()
 {
     for (int r = 0; r < game->rows; ++r)
-    {
         for (int c = 0; c < game->cols; ++c)
-        {
             drawCell(r, c);
-        }
-    }
 
     setlinecolor(borderColor);
     for (int r = 0; r <= game->rows; ++r)
     {
-        int y = margin + r * cellSize;
-        line(margin, y, margin + game->cols * cellSize, y);
+        int y = offsetY + gridY + r * cellSize;
+        line(offsetX + margin, y,
+             offsetX + margin + game->cols * cellSize, y);
     }
     for (int c = 0; c <= game->cols; ++c)
     {
-        int x = margin + c * cellSize;
-        line(x, margin, x, margin + game->rows * cellSize);
+        int x = offsetX + margin + c * cellSize;
+        line(x, offsetY + gridY,
+             x, offsetY + gridY + game->rows * cellSize);
     }
+}
+
+void GameRender::drawToolbar()
+{
+    int flags = game->getFlagCount();
+    char flagStr[32];
+    snprintf(flagStr, sizeof(flagStr), "Flags: %d / %d", flags, game->mines);
+    setfont(18, 0, "Arial");
+    int flagTextW = textwidth(flagStr);
+    int flagTextH = textheight(flagStr);
+    int flagBoxW = flagTextW + 16;
+    int flagBoxH = exitBtnH;
+    int flagBoxX = offsetX + margin;
+    int flagBoxY = offsetY + margin;
+
+    setfillcolor(EGERGB(255, 255, 255));
+    setlinecolor(borderColor);
+    bar(flagBoxX, flagBoxY, flagBoxX + flagBoxW, flagBoxY + flagBoxH);
+    rectangle(flagBoxX, flagBoxY, flagBoxX + flagBoxW, flagBoxY + flagBoxH);
+
+    settextcolor(EGERGB(80, 60, 40));
+    setbkmode(TRANSPARENT);
+    int tx = flagBoxX + (flagBoxW - flagTextW) / 2;
+    int ty = flagBoxY + (flagBoxH - flagTextH) / 2;
+    outtextxy(tx, ty, flagStr);
+
+    setfillcolor(EGERGB(220, 80, 80));
+    setlinecolor(EGERGB(180, 40, 40));
+    bar(offsetX + exitBtnX, offsetY + exitBtnY,
+        offsetX + exitBtnX + exitBtnW, offsetY + exitBtnY + exitBtnH);
+    rectangle(offsetX + exitBtnX, offsetY + exitBtnY,
+              offsetX + exitBtnX + exitBtnW, offsetY + exitBtnY + exitBtnH);
+    settextcolor(WHITE);
+    setbkmode(TRANSPARENT);
+    setfont(16, 0, "Arial");
+    const char *exitText = "Exit";
+    int ex = offsetX + exitBtnX + (exitBtnW - textwidth(exitText)) / 2;
+    int ey = offsetY + exitBtnY + (exitBtnH - textheight(exitText)) / 2;
+    outtextxy(ex, ey, exitText);
 }
 
 void GameRender::drawInfoBar()
 {
-    int y = margin + game->rows * cellSize + 10;
-    settextcolor(EGERGB(80, 60, 40));
-    setbkmode(TRANSPARENT);
-    setfont(16, 0, "Arial");
-    outtextxy(margin, y, "Left Click: Reveal   Right Click: Flag");
 }
 
 void GameRender::render()
 {
     cleardevice();
+    drawToolbar();
     drawBoard();
 }
 
-bool GameRender::handleMouse(mouse_msg msg, bool &hitMine, bool &won)
+bool GameRender::handleMouse(mouse_msg msg, bool &hitMine, bool &won,
+                              bool &exitRequested)
 {
+    exitRequested = false;
+
     if (msg.msg != mouse_msg_up)
         return false;
 
-    int c = (msg.x - margin) / cellSize;
-    int r = (msg.y - margin) / cellSize;
+    if (msg.x >= offsetX + exitBtnX &&
+        msg.x <= offsetX + exitBtnX + exitBtnW &&
+        msg.y >= offsetY + exitBtnY &&
+        msg.y <= offsetY + exitBtnY + exitBtnH)
+    {
+        exitRequested = true;
+        return true;
+    }
+
+    int c = (msg.x - offsetX - margin) / cellSize;
+    int r = (msg.y - offsetY - gridY) / cellSize;
 
     if (r < 0 || r >= game->rows || c < 0 || c >= game->cols)
         return false;
 
     if (msg.is_left())
     {
-        // 双击已翻开的数字格 → 和弦翻开周围
         if (game->isRevealed[r][c] && !game->isMine[r][c])
         {
             clock_t now = clock();
@@ -195,7 +243,6 @@ bool GameRender::handleMouse(mouse_msg msg, bool &hitMine, bool &won)
             return false;
         }
 
-        // 点击未翻开格子，重置双击状态
         lastClickTime = 0;
         lastClickR = -1;
         lastClickC = -1;
@@ -210,7 +257,6 @@ bool GameRender::handleMouse(mouse_msg msg, bool &hitMine, bool &won)
 
     if (msg.is_right())
     {
-        // 右键操作，重置双击状态
         lastClickTime = 0;
         lastClickR = -1;
         lastClickC = -1;
@@ -229,8 +275,8 @@ void GameRender::showMessage(const char *text)
 {
     int msgW = textwidth(text) + 40;
     int msgH = textheight(text) + 20;
-    int msgX = (windowW - msgW) / 2;
-    int msgY = (windowH - msgH) / 2;
+    int msgX = (screenW - msgW) / 2;
+    int msgY = (screenH - msgH) / 2;
 
     setfillcolor(EGERGB(255, 255, 255));
     setlinecolor(borderColor);
