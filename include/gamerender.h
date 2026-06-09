@@ -28,6 +28,10 @@ private:
     int lastClickR;
     int lastClickC;
 
+    // 上次操作位置
+    int lastActionR;
+    int lastActionC;
+
     void drawCell(int r, int c);
     void drawBoard();
     void drawInfoBar();
@@ -43,6 +47,8 @@ public:
 
     int getWindowWidth() const { return windowW; }
     int getWindowHeight() const { return windowH; }
+    int getLastR() const { return lastActionR; }
+    int getLastC() const { return lastActionC; }
 };
 
 #endif

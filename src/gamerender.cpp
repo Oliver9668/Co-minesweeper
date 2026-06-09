@@ -3,7 +3,8 @@
 
 GameRender::GameRender(Minesweeper *g, int cell, int mar)
     : game(g), cellSize(cell), margin(mar), infoBarHeight(50),
-      lastClickTime(0), lastClickR(-1), lastClickC(-1)
+      lastClickTime(0), lastClickR(-1), lastClickC(-1),
+      lastActionR(-1), lastActionC(-1)
 {
     windowW = margin * 2 + game->cols * cellSize;
     windowH = margin * 2 + game->rows * cellSize + infoBarHeight;
@@ -170,6 +171,8 @@ bool GameRender::handleMouse(mouse_msg msg, bool &hitMine, bool &won)
                 hitMine = game->revealAdjacent(r, c);
                 won = game->checkWin();
                 lastClickTime = 0;
+                lastActionR = r;
+                lastActionC = c;
                 return true;
             }
             lastClickTime = now;
@@ -181,6 +184,8 @@ bool GameRender::handleMouse(mouse_msg msg, bool &hitMine, bool &won)
         if (!game->isRevealed[r][c])
             hitMine = game->reveal(r, c);
         won = game->checkWin();
+        lastActionR = r;
+        lastActionC = c;
         return true;
     }
 
@@ -188,6 +193,8 @@ bool GameRender::handleMouse(mouse_msg msg, bool &hitMine, bool &won)
     {
         game->toggleFlag(r, c);
         won = game->checkWin();
+        lastActionR = r;
+        lastActionC = c;
         return true;
     }
 

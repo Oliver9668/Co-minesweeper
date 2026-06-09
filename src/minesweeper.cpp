@@ -267,4 +267,32 @@ void Minesweeper::revealAll()
         for (int j = 0; j < cols; ++j)
             if (isMine[i][j])
                 isRevealed[i][j] = true;
+    gameOver = true;
+}
+
+void Minesweeper::setMine(int r, int c)
+{
+    if (inBounds(r, c))
+        isMine[r][c] = true;
+}
+
+void Minesweeper::computeAdjacent()
+{
+    for (int i = 0; i < rows; ++i)
+        for (int j = 0; j < cols; ++j)
+            if (!isMine[i][j])
+                adjacentMines[i][j] = countAdjacentMines(i, j);
+}
+
+void Minesweeper::getMinePositions(vector<int> &mr, vector<int> &mc) const
+{
+    mr.clear();
+    mc.clear();
+    for (int i = 0; i < rows; ++i)
+        for (int j = 0; j < cols; ++j)
+            if (isMine[i][j])
+            {
+                mr.push_back(i);
+                mc.push_back(j);
+            }
 }

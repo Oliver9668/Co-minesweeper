@@ -48,6 +48,15 @@ public:
     // 标记/取消标记
     void toggleFlag(int r, int c);
 
+    // 联机：手动布雷
+    void setMine(int r, int c);
+    void computeAdjacent();
+
+    // 联机：获取雷的位置列表，查询格子状态
+    void getMinePositions(vector<int> &mr, vector<int> &mc) const;
+    bool cellRevealed(int r, int c) const { return isRevealed[r][c]; }
+    bool cellIsMine(int r, int c) const { return isMine[r][c]; }
+
     // 检查是否胜利（所有非雷格子都已翻开，或者所有雷都被标记）
     bool checkWin() const;
 
