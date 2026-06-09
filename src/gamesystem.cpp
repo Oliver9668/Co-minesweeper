@@ -30,6 +30,13 @@ bool GameSystem::start()
     return true;
 }
 
+bool GameSystem::start(int rows, int cols, int mines)
+{
+    delete game;
+    game = new Minesweeper(rows, cols, mines);
+    return true;
+}
+
 void GameSystem::run()
 {
     while (!game->isGameOver() && !game->checkWin())
