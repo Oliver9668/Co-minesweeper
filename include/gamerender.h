@@ -2,6 +2,7 @@
 #define GAMERENDER_H
 
 #include <graphics.h>
+#include <ctime>
 #include "minesweeper.h"
 
 class GameRender
@@ -21,6 +22,11 @@ private:
     COLORREF mineColor;
     COLORREF borderColor;
     COLORREF numberColors[8];
+
+    // 双击检测
+    clock_t lastClickTime;
+    int lastClickR;
+    int lastClickC;
 
     void drawCell(int r, int c);
     void drawBoard();

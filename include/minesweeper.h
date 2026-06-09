@@ -42,6 +42,9 @@ public:
     // 执行一次翻开操作
     bool reveal(int r, int c);
 
+    // 点击已翻开的数字格，若周围旗数=数字，自动翻开周围非旗格
+    bool revealAdjacent(int r, int c);
+
     // 标记/取消标记
     void toggleFlag(int r, int c);
 

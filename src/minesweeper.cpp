@@ -117,6 +117,58 @@ bool Minesweeper::reveal(int r, int c)
     return false;
 }
 
+// 点击已翻开的数字格，若周围旗数=数字，自动翻开周围非旗格
+bool Minesweeper::revealAdjacent(int r, int c)
+{
+    if (!inBounds(r, c) || gameOver)
+        return false;
+    if (!isRevealed[r][c] || isMine[r][c])
+        return false;
+
+    // 统计周围旗子数
+    int flagCount = 0;
+    for (int i = 0; i < 8; ++i)
+    {
+        int nr = r + dx[i], nc = c + dy[i];
+        if (inBounds(nr, nc) && isFlagged[nr][nc])
+            ++flagCount;
+    }
+
+    // 旗子数和数字不匹配则不做任何操作
+    if (flagCount != adjacentMines[r][c])
+        return false;
+
+    // 翻开周围所有未插旗且未翻开的格子
+    bool hitMine = false;
+    for (int i = 0; i < 8; ++i)
+    {
+        int nr = r + dx[i], nc = c + dy[i];
+        if (inBounds(nr, nc) && !isFlagged[nr][nc] && !isRevealed[nr][nc])
+        {
+            if (isMine[nr][nc])
+            {
+                hitMine = true;
+                gameOver = true;
+            }
+            else
+            {
+                revealCell(nr, nc);
+            }
+        }
+    }
+
+    // 如果触雷，翻开所有雷
+    if (hitMine)
+    {
+        for (int i = 0; i < rows; ++i)
+            for (int j = 0; j < cols; ++j)
+                if (isMine[i][j])
+                    isRevealed[i][j] = true;
+    }
+
+    return hitMine;
+}
+
 // 标记/取消标记
 void Minesweeper::toggleFlag(int r, int c)
 {

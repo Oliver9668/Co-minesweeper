@@ -25,6 +25,10 @@ int main()
     render.render();
     delay_ms(10);
 
+    // 清空窗口切换残留的鼠标事件
+    while (mousemsg())
+        getmouse();
+
     mouse_msg msg = {0};
     bool hitMine = false;
     bool won = false;

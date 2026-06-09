@@ -2,7 +2,8 @@
 #include "gamerender.h"
 
 GameRender::GameRender(Minesweeper *g, int cell, int mar)
-    : game(g), cellSize(cell), margin(mar), infoBarHeight(50)
+    : game(g), cellSize(cell), margin(mar), infoBarHeight(50),
+      lastClickTime(0), lastClickR(-1), lastClickC(-1)
 {
     windowW = margin * 2 + game->cols * cellSize;
     windowH = margin * 2 + game->rows * cellSize + infoBarHeight;
@@ -76,8 +77,8 @@ void GameRender::drawCell(int r, int c)
 
         if (game->isFlagged[r][c])
         {
-            int flagW = (int)(cellSize * 0.32);
-            int flagH = (int)(cellSize * 0.28);
+            int flagW = (int)(cellSize * 0.45);
+            int flagH = (int)(cellSize * 0.35);
             int centerX = x + cellSize / 2;
             int centerY = y + cellSize / 2;
 
@@ -159,7 +160,26 @@ bool GameRender::handleMouse(mouse_msg msg, bool &hitMine, bool &won)
 
     if (msg.is_left())
     {
-        hitMine = game->reveal(r, c);
+        // 双击已翻开的数字格 → 和弦翻开周围
+        if (game->isRevealed[r][c] && !game->isMine[r][c])
+        {
+            clock_t now = clock();
+            if (r == lastClickR && c == lastClickC &&
+                (now - lastClickTime) < CLOCKS_PER_SEC / 2)
+            {
+                hitMine = game->revealAdjacent(r, c);
+                won = game->checkWin();
+                lastClickTime = 0;
+                return true;
+            }
+            lastClickTime = now;
+            lastClickR = r;
+            lastClickC = c;
+            return false;
+        }
+
+        if (!game->isRevealed[r][c])
+            hitMine = game->reveal(r, c);
         won = game->checkWin();
         return true;
     }
