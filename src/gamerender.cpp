@@ -76,12 +76,33 @@ void GameRender::drawCell(int r, int c)
 
         if (game->isFlagged[r][c])
         {
-            settextcolor(flagColor);
-            setbkmode(TRANSPARENT);
-            setfont(cellSize - 4, 0, "Arial");
-            int tx = x + (cellSize - textwidth('F')) / 2;
-            int ty = y + (cellSize - textheight('F')) / 2 - 2;
-            outtextxy(tx, ty, 'F');
+            int flagW = (int)(cellSize * 0.32);
+            int flagH = (int)(cellSize * 0.28);
+            int centerX = x + cellSize / 2;
+            int centerY = y + cellSize / 2;
+
+            int poleX = centerX - flagW / 2;
+            int poleTop = centerY - flagH;
+            int poleBottom = centerY + flagH;
+            int triLeft = poleX;
+            int triRight = poleX + flagW;
+            int triTop = poleTop;
+            int triBottom = triTop + flagH;
+            int triMidY = (triTop + triBottom) / 2;
+
+            // 三角旗帜（先画）
+            setfillcolor(flagColor);
+            setlinecolor(flagColor);
+            ege_point pts[3] = {
+                {(float)triLeft, (float)triTop},
+                {(float)triRight, (float)triMidY},
+                {(float)triLeft, (float)triBottom}
+            };
+            ege_fillpoly(3, pts);
+
+            // 旗杆（后画，盖在旗子上）
+            setlinecolor(EGERGB(80, 40, 0));
+            line(poleX, poleTop, poleX, poleBottom);
         }
     }
 }
@@ -146,6 +167,7 @@ bool GameRender::handleMouse(mouse_msg msg, bool &hitMine, bool &won)
     if (msg.is_right())
     {
         game->toggleFlag(r, c);
+        won = game->checkWin();
         return true;
     }
 

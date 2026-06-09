@@ -133,10 +133,27 @@ void Minesweeper::toggleFlag(int r, int c)
 // 检查是否胜利（所有非雷格子都已翻开）
 bool Minesweeper::checkWin() const
 {
+    // 所有非雷格子都已翻开
+    bool allOpened = true;
     for (int i = 0; i < rows; ++i)
         for (int j = 0; j < cols; ++j)
             if (!isMine[i][j] && !isRevealed[i][j])
+            {
+                allOpened = false;
+                break;
+            }
+    if (allOpened)
+        return true;
+
+    // 所有雷格都被正确标记，且没有非雷格被错误标记
+    for (int i = 0; i < rows; ++i)
+        for (int j = 0; j < cols; ++j)
+        {
+            if (isMine[i][j] && !isFlagged[i][j])
                 return false;
+            if (!isMine[i][j] && isFlagged[i][j])
+                return false;
+        }
     return true;
 }
 

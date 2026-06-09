@@ -45,7 +45,7 @@ public:
     // 标记/取消标记
     void toggleFlag(int r, int c);
 
-    // 检查是否胜利（所有非雷格子都已翻开）
+    // 检查是否胜利（所有非雷格子都已翻开，或者所有雷都被标记）
     bool checkWin() const;
 
     bool isGameOver() const;
