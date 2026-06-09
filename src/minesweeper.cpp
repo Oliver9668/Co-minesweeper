@@ -282,6 +282,8 @@ void Minesweeper::computeAdjacent()
         for (int j = 0; j < cols; ++j)
             if (!isMine[i][j])
                 adjacentMines[i][j] = countAdjacentMines(i, j);
+    // 手动布雷后标记为非首次操作，避免 reveal 重新随机布雷
+    firstMove = false;
 }
 
 void Minesweeper::getMinePositions(vector<int> &mr, vector<int> &mc) const

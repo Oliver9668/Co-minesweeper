@@ -173,6 +173,7 @@ bool GameRender::handleMouse(mouse_msg msg, bool &hitMine, bool &won)
                 lastClickTime = 0;
                 lastActionR = r;
                 lastActionC = c;
+                lastActionType = 'C';
                 return true;
             }
             lastClickTime = now;
@@ -186,6 +187,7 @@ bool GameRender::handleMouse(mouse_msg msg, bool &hitMine, bool &won)
         won = game->checkWin();
         lastActionR = r;
         lastActionC = c;
+        lastActionType = 'R';
         return true;
     }
 
@@ -195,6 +197,7 @@ bool GameRender::handleMouse(mouse_msg msg, bool &hitMine, bool &won)
         won = game->checkWin();
         lastActionR = r;
         lastActionC = c;
+        lastActionType = 'F';
         return true;
     }
 

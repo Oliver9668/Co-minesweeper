@@ -52,16 +52,6 @@ static void runSinglePlayer(int rows, int cols, int mines)
     closegraph();
 }
 
-// 获取本地操作类型
-static char getActionType(mouse_msg msg, Minesweeper &game, int r, int c)
-{
-    if (msg.is_right())
-        return 'F';
-    if (game.cellRevealed(r, c) && !game.cellIsMine(r, c))
-        return 'C';
-    return 'R';
-}
-
 // 执行操作并检测结果
 static bool doAction(Minesweeper &game, char type, int r, int c,
                       bool &hitMine, bool &won)
@@ -169,7 +159,7 @@ static void runHost(int rows, int cols, int mines)
             if (render.handleMouse(msg, localHit, localWon))
             {
                 int r = render.getLastR(), c = render.getLastC();
-                char type = getActionType(msg, game, r, c);
+                char type = render.getLastActionType();
                 sendOp(net, type, r, c);
                 redraw = true;
                 if (localHit)
@@ -328,7 +318,7 @@ static void runClient(const char *ip)
             if (render.handleMouse(msg, localHit, localWon))
             {
                 int r = render.getLastR(), c = render.getLastC();
-                char type = getActionType(msg, *game, r, c);
+                char type = render.getLastActionType();
                 sendOp(net, type, r, c);
                 redraw = true;
                 if (localHit)

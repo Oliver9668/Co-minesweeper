@@ -32,6 +32,9 @@ private:
     int lastActionR;
     int lastActionC;
 
+    // 上次操作类型: 'R'=翻开 'C'=和弦 'F'=插旗
+    char lastActionType;
+
     void drawCell(int r, int c);
     void drawBoard();
     void drawInfoBar();
@@ -49,6 +52,7 @@ public:
     int getWindowHeight() const { return windowH; }
     int getLastR() const { return lastActionR; }
     int getLastC() const { return lastActionC; }
+    char getLastActionType() const { return lastActionType; }
 };
 
 #endif
