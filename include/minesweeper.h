@@ -5,8 +5,6 @@
 #include <vector>
 #include <string>
 
-using namespace std;
-
 // 方向数组，用于遍历周围8格
 const int dx[8] = {-1, -1, -1, 0, 0, 1, 1, 1};
 const int dy[8] = {-1, 0, 1, -1, 1, -1, 0, 1};
@@ -17,10 +15,10 @@ class Minesweeper
 
 private:
     int rows, cols, mines;
-    vector<vector<bool>> isMine;       // 是否有雷
-    vector<vector<bool>> isRevealed;   // 是否已翻开
-    vector<vector<bool>> isFlagged;    // 是否插旗
-    vector<vector<int>> adjacentMines; // 周围雷数
+    std::vector<std::vector<bool>> isMine;       // 是否有雷
+    std::vector<std::vector<bool>> isRevealed;   // 是否已翻开
+    std::vector<std::vector<bool>> isFlagged;    // 是否插旗
+    std::vector<std::vector<int>> adjacentMines; // 周围雷数
     bool gameOver;
     bool firstMove; // 是否为第一步（可用于避免第一步踩雷）
 
@@ -53,7 +51,7 @@ public:
     void computeAdjacent();
 
     // 联机：获取雷的位置列表，查询格子状态
-    void getMinePositions(vector<int> &mr, vector<int> &mc) const;
+    void getMinePositions(std::vector<int> &mr, std::vector<int> &mc) const;
     bool cellRevealed(int r, int c) const { return isRevealed[r][c]; }
     bool cellIsMine(int r, int c) const { return isMine[r][c]; }
 
