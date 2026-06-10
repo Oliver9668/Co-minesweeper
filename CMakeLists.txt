@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.10)
 
 project(Minesweeper)
 
+# 静态链接
+set(CMAKE_EXE_LINKER_FLAGS "-static")
+
 # 设置可执行文件输出目录
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(EGE_LIB_PATH E:/Code/Cpp/lib/ege-25.11.0)   # <--------设置EGE库的路径
