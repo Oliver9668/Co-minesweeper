@@ -54,6 +54,14 @@ public:
     void getMinePositions(std::vector<int> &mr, std::vector<int> &mc) const;
     bool cellRevealed(int r, int c) const { return isRevealed[r][c]; }
     bool cellIsMine(int r, int c) const { return isMine[r][c]; }
+    void setTotalMines(int m) { mines = m; }
+    void hideAllMines()
+    {
+        for (int i = 0; i < rows; ++i)
+            for (int j = 0; j < cols; ++j)
+                if (isMine[i][j])
+                    isRevealed[i][j] = false;
+    }
 
     // 检查是否胜利（所有非雷格子都已翻开，或者所有雷都被标记）
     bool checkWin() const;

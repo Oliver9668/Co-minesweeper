@@ -104,14 +104,8 @@ bool Minesweeper::reveal(int r, int c)
     }
     if (isMine[r][c])
     {
-        // 踩雷，游戏结束
-        gameOver = true;
-        // 翻开所有雷
-        for (int i = 0; i < rows; ++i)
-            for (int j = 0; j < cols; ++j)
-                if (isMine[i][j])
-                    isRevealed[i][j] = true;
-        return true; // 表示触雷
+        isRevealed[r][c] = true;
+        return true;
     }
     revealCell(r, c);
     return false;
@@ -148,22 +142,13 @@ bool Minesweeper::revealAdjacent(int r, int c)
             if (isMine[nr][nc])
             {
                 hitMine = true;
-                gameOver = true;
+                isRevealed[nr][nc] = true;
             }
             else
             {
                 revealCell(nr, nc);
             }
         }
-    }
-
-    // 如果触雷，翻开所有雷
-    if (hitMine)
-    {
-        for (int i = 0; i < rows; ++i)
-            for (int j = 0; j < cols; ++j)
-                if (isMine[i][j])
-                    isRevealed[i][j] = true;
     }
 
     return hitMine;
@@ -296,7 +281,7 @@ void Minesweeper::computeAdjacent()
     firstMove = false;
 }
 
-void Minesweeper::getMinePositions(vector<int> &mr, vector<int> &mc) const
+void Minesweeper::getMinePositions(std::vector<int> &mr, std::vector<int> &mc) const
 {
     mr.clear();
     mc.clear();

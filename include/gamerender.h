@@ -21,6 +21,10 @@ private:
     int offsetX;
     int offsetY;
 
+    int scrollY;
+    int maxScrollY;
+    int boardViewH;
+
     COLORREF bgColor;
     COLORREF cellColor;
     COLORREF cellHighlight;
@@ -50,6 +54,7 @@ private:
     void drawBoard();
     void drawToolbar();
     void drawInfoBar();
+    void drawScrollbar();
 
 public:
     GameRender(Minesweeper *g, int cell = 30, int mar = 20, int scrW = 1000, int scrH = 650);
@@ -58,6 +63,7 @@ public:
     void init();
     void render();
     bool handleMouse(mouse_msg msg, bool &hitMine, bool &won, bool &exitRequested);
+    bool handleScroll(mouse_msg msg);
     void showMessage(const char *text);
 
     int getWindowWidth() const { return windowW; }

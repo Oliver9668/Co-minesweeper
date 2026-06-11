@@ -6,14 +6,32 @@ GameRender::GameRender(Minesweeper *g, int cell, int mar, int scrW, int scrH)
     : game(g), cellSize(cell), margin(mar), infoBarHeight(50),
       toolbarHeight(40), screenW(scrW), screenH(scrH),
       lastClickTime(0), lastClickR(-1), lastClickC(-1),
-      lastActionR(-1), lastActionC(-1)
+      lastActionR(-1), lastActionC(-1),
+      scrollY(0), maxScrollY(0)
 {
     gridY = margin + toolbarHeight;
     windowW = margin * 2 + game->cols * cellSize;
-    windowH = margin * 2 + game->rows * cellSize + toolbarHeight;
+    int fullBoardHeight = margin * 2 + game->rows * cellSize + toolbarHeight;
+    windowH = fullBoardHeight;
 
     offsetX = (screenW - windowW) / 2;
-    offsetY = (screenH - windowH) / 2;
+
+    boardViewH = screenH;
+    int availableBoardH = screenH - (margin + toolbarHeight);
+    int totalBoardH = game->rows * cellSize;
+
+    if (totalBoardH > availableBoardH)
+    {
+        offsetY = 0;
+        maxScrollY = totalBoardH - availableBoardH + cellSize;
+        scrollY = 0;
+    }
+    else
+    {
+        offsetY = (screenH - fullBoardHeight) / 2;
+        maxScrollY = 0;
+        scrollY = 0;
+    }
 
     exitBtnW = 60; exitBtnH = 28;
     exitBtnX = margin + game->cols * cellSize - exitBtnW;
@@ -51,7 +69,7 @@ void GameRender::init()
 void GameRender::drawCell(int r, int c)
 {
     int x = offsetX + margin + c * cellSize;
-    int y = offsetY + gridY + r * cellSize;
+    int y = offsetY + gridY + r * cellSize - scrollY;
 
     if (game->isRevealed[r][c])
     {
@@ -127,27 +145,42 @@ void GameRender::drawCell(int r, int c)
 
 void GameRender::drawBoard()
 {
-    for (int r = 0; r < game->rows; ++r)
+    int boardTop = offsetY + gridY;
+    int firstRow = 0;
+    int lastRow = game->rows - 1;
+
+    if (maxScrollY > 0)
+    {
+        firstRow = scrollY / cellSize;
+        lastRow = (scrollY + boardViewH - boardTop) / cellSize;
+        if (lastRow >= game->rows) lastRow = game->rows - 1;
+        if (firstRow < 0) firstRow = 0;
+    }
+
+    for (int r = firstRow; r <= lastRow; ++r)
         for (int c = 0; c < game->cols; ++c)
             drawCell(r, c);
 
     setlinecolor(borderColor);
     for (int r = 0; r <= game->rows; ++r)
     {
-        int y = offsetY + gridY + r * cellSize;
+        int y = offsetY + gridY + r * cellSize - scrollY;
         line(offsetX + margin, y,
              offsetX + margin + game->cols * cellSize, y);
     }
     for (int c = 0; c <= game->cols; ++c)
     {
         int x = offsetX + margin + c * cellSize;
-        line(x, offsetY + gridY,
-             x, offsetY + gridY + game->rows * cellSize);
+        line(x, offsetY + gridY - scrollY,
+             x, offsetY + gridY + game->rows * cellSize - scrollY);
     }
 }
 
 void GameRender::drawToolbar()
 {
+    setfillcolor(bgColor);
+    bar(0, 0, screenW, offsetY + gridY);
+
     int flags = game->getFlagCount();
     char flagStr[32];
     snprintf(flagStr, sizeof(flagStr), "Flags: %d / %d", flags, game->mines);
@@ -189,11 +222,56 @@ void GameRender::drawInfoBar()
 {
 }
 
+void GameRender::drawScrollbar()
+{
+    if (maxScrollY <= 0) return;
+
+    int totalBoardH = game->rows * cellSize;
+    int availableBoardH = screenH - (margin + toolbarHeight);
+    int trackY = margin + toolbarHeight;
+    int trackH = availableBoardH;
+    int trackX = screenW - 12;
+    int trackW = 8;
+
+    setfillcolor(EGERGB(200, 190, 170));
+    bar(trackX, trackY, trackX + trackW, trackY + trackH);
+
+    int thumbH = (int)((long long)availableBoardH * availableBoardH / totalBoardH);
+    if (thumbH < 20) thumbH = 20;
+    int thumbTravel = trackH - thumbH;
+    int thumbY = trackY + (int)((long long)scrollY * thumbTravel / maxScrollY);
+
+    setfillcolor(EGERGB(160, 140, 120));
+    setlinecolor(EGERGB(120, 100, 80));
+    bar(trackX, thumbY, trackX + trackW, thumbY + thumbH);
+}
+
 void GameRender::render()
 {
     cleardevice();
-    drawToolbar();
     drawBoard();
+    drawScrollbar();
+    drawToolbar();
+}
+
+bool GameRender::handleScroll(mouse_msg msg)
+{
+    if (msg.msg != mouse_msg_wheel)
+        return false;
+
+    if (maxScrollY <= 0)
+        return false;
+
+    int scrollStep = cellSize * 3;
+    if (msg.wheel > 0)
+        scrollY -= scrollStep;
+    else
+        scrollY += scrollStep;
+
+    if (scrollY < 0) scrollY = 0;
+    if (scrollY > maxScrollY) scrollY = maxScrollY;
+
+    return true;
 }
 
 bool GameRender::handleMouse(mouse_msg msg, bool &hitMine, bool &won,
@@ -214,7 +292,7 @@ bool GameRender::handleMouse(mouse_msg msg, bool &hitMine, bool &won,
     }
 
     int c = (msg.x - offsetX - margin) / cellSize;
-    int r = (msg.y - offsetY - gridY) / cellSize;
+    int r = (msg.y - offsetY - gridY + scrollY) / cellSize;
 
     if (r < 0 || r >= game->rows || c < 0 || c >= game->cols)
         return false;

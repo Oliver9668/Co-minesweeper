@@ -143,6 +143,8 @@ void StartScreen::drawMultiMenu()
 
 bool StartScreen::promptCustomDifficulty()
 {
+    mines = rows * cols / 8;
+
     char bufR[8], bufC[8], bufM[8];
     snprintf(bufR, sizeof(bufR), "%d", rows);
     snprintf(bufC, sizeof(bufC), "%d", cols);
@@ -154,14 +156,24 @@ bool StartScreen::promptCustomDifficulty()
         { "Mines:", bufM, 8, (int)strlen(bufM), true },
     };
 
-    if (!showInputDialog("Custom Difficulty", fields, 3, width, height))
+    auto onFieldChange = [](InputField *flds, int cnt, int changed) {
+        if (changed <= 1) {
+            int r = atoi(flds[0].buffer);
+            int c = atoi(flds[1].buffer);
+            int m = r * c / 8;
+            snprintf(flds[2].buffer, flds[2].bufSize, "%d", m);
+            flds[2].textLen = (int)strlen(flds[2].buffer);
+        }
+    };
+
+    if (!showInputDialog("Custom Difficulty", fields, 3, width, height, onFieldChange))
         return false;
 
     int newR = atoi(bufR);
     int newC = atoi(bufC);
     int newM = atoi(bufM);
-    if (newR >= 5 && newR <= 30) rows = newR;
-    if (newC >= 5 && newC <= 50) cols = newC;
+    if (newR >= 5 && newR <= 50) rows = newR;
+    if (newC >= 5 && newC <= 30) cols = newC;
     if (newM > 0 && newM < rows * cols) mines = newM;
     return true;
 }
@@ -236,7 +248,7 @@ bool StartScreen::show()
             case MENU_MULTI:
                 if (hostBtn->buttonRender(msg))
                 {
-                    rows = 16; cols = 16; mines = 40;
+                    rows = 16; cols = 30; mines = 60;
                     if (!promptCustomDifficulty())
                     {
                         drawMultiMenu();

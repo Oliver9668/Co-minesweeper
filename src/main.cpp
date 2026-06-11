@@ -16,8 +16,7 @@ int main()
         StartScreen startScreen(SCR_W, SCR_H);
         startScreen.init();
 
-        if (!startScreen.show())
-        {
+        if (!startScreen.show()){
             break;
         }
 

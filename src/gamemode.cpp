@@ -26,6 +26,11 @@ void runSinglePlayer(int rows, int cols, int mines)
         if (mousemsg())
         {
             msg = getmouse();
+            if (render.handleScroll(msg))
+            {
+                render.render();
+                continue;
+            }
             if (render.handleMouse(msg, hitMine, won, exitRequested))
             {
                 render.render();
@@ -48,6 +53,8 @@ void runSinglePlayer(int rows, int cols, int mines)
                 }
                 if (hitMine)
                 {
+                    game.revealAll();
+                    render.render();
                     render.showMessage("Game Over!");
                     while (mousemsg()) getmouse();
                     while (true)
@@ -106,7 +113,7 @@ void runHost(int rows, int cols, int mines)
         net.sendMsg("END");
     }
 
-    Minesweeper game(rows, cols, 0);
+    Minesweeper game(rows, cols, mines);
     for (size_t i = 0; i < mineRows.size(); ++i)
         game.setMine(mineRows[i], mineCols[i]);
     game.computeAdjacent();
@@ -129,24 +136,29 @@ void runHost(int rows, int cols, int mines)
         if (mousemsg())
         {
             msg = getmouse();
-            bool localHit = false, localWon = false;
-            if (render.handleMouse(msg, localHit, localWon, exitRequested))
+            if (render.handleScroll(msg))
             {
-                if (exitRequested) break;
-                int r = render.getLastR(), c = render.getLastC();
-                char type = render.getLastActionType();
-                sendOp(net, type, r, c);
                 redraw = true;
-                if (localHit)
+            }
+            else
+            {
+                bool localHit = false, localWon = false;
+                if (render.handleMouse(msg, localHit, localWon, exitRequested))
                 {
-                    hitMine = true;
-                    game.revealAll();
-                    net.sendMsg("LOSE");
-                }
-                if (localWon)
-                {
-                    won = true;
-                    net.sendMsg("WIN");
+                    if (exitRequested) break;
+                    int r = render.getLastR(), c = render.getLastC();
+                    char type = render.getLastActionType();
+                    sendOp(net, type, r, c);
+                    redraw = true;
+                    if (localHit)
+                    {
+                        hitMine = true;
+                    }
+                    if (localWon)
+                    {
+                        won = true;
+                        net.sendMsg("WIN");
+                    }
                 }
             }
         }
@@ -158,44 +170,32 @@ void runHost(int rows, int cols, int mines)
                 break;
 
             if (line == "WIN")   { won = true; }
-            else if (line == "LOSE")
-            {
-                game.revealAll();
-                hitMine = true;
-            }
             else
             {
                 char type; int r, c;
                 sscanf(line.c_str(), "%c %d %d", &type, &r, &c);
                 bool rh = false, rw = false;
                 doAction(game, type, r, c, rh, rw);
-                if (rh) { game.revealAll(); hitMine = true; }
+                if (rh) { hitMine = true; }
                 if (rw) { won = true; }
             }
             redraw = true;
         }
 
-        if (redraw)
+        if (redraw || hitMine)
             render.render();
+
+        if (hitMine)
+        {
+            delay_ms(2000);
+            game.hideAllMines();
+            hitMine = false;
+            render.render();
+        }
 
         if (won)
         {
             render.showMessage("You Win!");
-            while (mousemsg()) getmouse();
-            while (true)
-            {
-                if (mousemsg())
-                {
-                    mouse_msg m = getmouse();
-                    if (m.msg == mouse_msg_up) break;
-                }
-                delay_ms(10);
-            }
-            break;
-        }
-        if (hitMine)
-        {
-            render.showMessage("Game Over!");
             while (mousemsg()) getmouse();
             while (true)
             {
@@ -259,6 +259,7 @@ void runClient(const char *ip)
             else if (line == "END" && game)
             {
                 game->computeAdjacent();
+                game->setTotalMines(mines);
                 break;
             }
         }
@@ -282,24 +283,29 @@ void runClient(const char *ip)
         if (mousemsg())
         {
             msg = getmouse();
-            bool localHit = false, localWon = false;
-            if (render.handleMouse(msg, localHit, localWon, exitRequested))
+            if (render.handleScroll(msg))
             {
-                if (exitRequested) break;
-                int r = render.getLastR(), c = render.getLastC();
-                char type = render.getLastActionType();
-                sendOp(net, type, r, c);
                 redraw = true;
-                if (localHit)
+            }
+            else
+            {
+                bool localHit = false, localWon = false;
+                if (render.handleMouse(msg, localHit, localWon, exitRequested))
                 {
-                    hitMine = true;
-                    game->revealAll();
-                    net.sendMsg("LOSE");
-                }
-                if (localWon)
-                {
-                    won = true;
-                    net.sendMsg("WIN");
+                    if (exitRequested) break;
+                    int r = render.getLastR(), c = render.getLastC();
+                    char type = render.getLastActionType();
+                    sendOp(net, type, r, c);
+                    redraw = true;
+                    if (localHit)
+                    {
+                        hitMine = true;
+                    }
+                    if (localWon)
+                    {
+                        won = true;
+                        net.sendMsg("WIN");
+                    }
                 }
             }
         }
@@ -311,44 +317,32 @@ void runClient(const char *ip)
                 break;
 
             if (line == "WIN")   { won = true; }
-            else if (line == "LOSE")
-            {
-                game->revealAll();
-                hitMine = true;
-            }
             else
             {
                 char type; int r, c;
                 sscanf(line.c_str(), "%c %d %d", &type, &r, &c);
                 bool rh = false, rw = false;
                 doAction(*game, type, r, c, rh, rw);
-                if (rh) { game->revealAll(); hitMine = true; }
+                if (rh) { hitMine = true; }
                 if (rw) { won = true; }
             }
             redraw = true;
         }
 
-        if (redraw)
+        if (redraw || hitMine)
             render.render();
+
+        if (hitMine)
+        {
+            delay_ms(2000);
+            game->hideAllMines();
+            hitMine = false;
+            render.render();
+        }
 
         if (won)
         {
             render.showMessage("You Win!");
-            while (mousemsg()) getmouse();
-            while (true)
-            {
-                if (mousemsg())
-                {
-                    mouse_msg m = getmouse();
-                    if (m.msg == mouse_msg_up) break;
-                }
-                delay_ms(10);
-            }
-            break;
-        }
-        if (hitMine)
-        {
-            render.showMessage("Game Over!");
             while (mousemsg()) getmouse();
             while (true)
             {

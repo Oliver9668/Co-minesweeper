@@ -14,8 +14,11 @@ struct InputField
     bool numericOnly;
 };
 
+typedef void (*FieldChangeCallback)(InputField *fields, int count, int changedField);
+
 inline bool showInputDialog(const char *title, InputField *fields, int count,
-                            int screenW, int screenH)
+                            int screenW, int screenH,
+                            FieldChangeCallback onFieldChange = nullptr)
 {
     int dlgW = 340;
     int dlgH = 140 + count * 50;
@@ -98,6 +101,8 @@ inline bool showInputDialog(const char *title, InputField *fields, int count,
                     f->buffer[f->textLen] = ch;
                     f->textLen++;
                     f->buffer[f->textLen] = '\0';
+                    if (onFieldChange)
+                        onFieldChange(fields, count, activeField);
                     drawDialog();
                 }
             }
@@ -107,6 +112,8 @@ inline bool showInputDialog(const char *title, InputField *fields, int count,
                 {
                     f->textLen--;
                     f->buffer[f->textLen] = '\0';
+                    if (onFieldChange)
+                        onFieldChange(fields, count, activeField);
                     drawDialog();
                 }
                 else if (k.key == key_tab)

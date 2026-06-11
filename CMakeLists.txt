@@ -22,7 +22,7 @@ target_link_directories(ege INTERFACE ${EGE_LIB_PATH}/lib/mingw64)
 target_link_libraries(ege INTERFACE graphics gdiplus gdi32 imm32 msimg32 ole32 oleaut32 winmm uuid)
 
 # 使用指定的源文件向项目添加可执行文件
-add_executable(Minesweeper ${SRC_LIST})
+add_executable(Minesweeper WIN32 ${SRC_LIST})
 
 # 将源添加到目标
 target_link_libraries(Minesweeper PRIVATE ege ws2_32)
