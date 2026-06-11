@@ -12,6 +12,8 @@ struct InputField
     int bufSize;
     int textLen;
     bool numericOnly;
+    char origBuffer[256];
+    bool dirty;
 };
 
 typedef void (*FieldChangeCallback)(InputField *fields, int count, int changedField);
@@ -31,6 +33,35 @@ inline bool showInputDialog(const char *title, InputField *fields, int count,
 
     int okX = dlgX + 60, okY = dlgY + 65 + count * 50 + 10, okW = 80, okH = 32;
     int cancelX = dlgX + 200, cancelY = okY, cancelW = okW, cancelH = okH;
+
+    for (int i = 0; i < count; ++i)
+    {
+        strncpy(fields[i].origBuffer, fields[i].buffer, 255);
+        fields[i].origBuffer[255] = '\0';
+        fields[i].dirty = false;
+    }
+
+    auto restoreField = [&](int i) {
+        if (!fields[i].dirty && fields[i].textLen == 0)
+        {
+            strncpy(fields[i].buffer, fields[i].origBuffer, fields[i].bufSize - 1);
+            fields[i].buffer[fields[i].bufSize - 1] = '\0';
+            fields[i].textLen = (int)strlen(fields[i].buffer);
+        }
+    };
+
+    auto activateField = [&](int i) {
+        restoreField(activeField);
+        if (fields[i].textLen > 0)
+        {
+            strncpy(fields[i].origBuffer, fields[i].buffer, 255);
+            fields[i].origBuffer[255] = '\0';
+        }
+        fields[i].buffer[0] = '\0';
+        fields[i].textLen = 0;
+        fields[i].dirty = false;
+        activeField = i;
+    };
 
     auto drawDialog = [&]() {
         setfillcolor(EGERGB(255, 250, 240));
@@ -57,7 +88,7 @@ inline bool showInputDialog(const char *title, InputField *fields, int count,
             int fy = dlgY + 65 + i * 50;
             bar(fieldX, fy, fieldX + fieldW, fy + fieldH);
             rectangle(fieldX, fy, fieldX + fieldW, fy + fieldH);
-            settextcolor(BLACK);
+            settextcolor(fields[i].dirty ? BLACK : EGERGB(180, 170, 160));
             outtextxy(fieldX + 6, fy + 5, fields[i].buffer);
         }
 
@@ -98,6 +129,7 @@ inline bool showInputDialog(const char *title, InputField *fields, int count,
                        (ch >= 'A' && ch <= 'Z') || ch == '.' || ch == '-');
                 if (valid && f->textLen < f->bufSize - 1)
                 {
+                    f->dirty = true;
                     f->buffer[f->textLen] = ch;
                     f->textLen++;
                     f->buffer[f->textLen] = '\0';
@@ -112,17 +144,22 @@ inline bool showInputDialog(const char *title, InputField *fields, int count,
                 {
                     f->textLen--;
                     f->buffer[f->textLen] = '\0';
+                    if (f->textLen == 0)
+                        f->dirty = false;
                     if (onFieldChange)
                         onFieldChange(fields, count, activeField);
                     drawDialog();
                 }
                 else if (k.key == key_tab)
                 {
-                    activeField = (activeField + 1) % count;
+                    int next = (activeField + 1) % count;
+                    activateField(next);
                     drawDialog();
                 }
                 else if (k.key == key_enter)
                 {
+                    for (int i = 0; i < count; ++i)
+                        restoreField(i);
                     shouldApply = true;
                     break;
                 }
@@ -147,16 +184,23 @@ inline bool showInputDialog(const char *title, InputField *fields, int count,
                         m.y >= fy && m.y <= fy + fieldH)
                     {
                         if (activeField != i)
+                            activateField(i);
+                        else
                         {
-                            activeField = i;
-                            drawDialog();
+                            restoreField(activeField);
+                            fields[i].buffer[0] = '\0';
+                            fields[i].textLen = 0;
+                            fields[i].dirty = false;
                         }
+                        drawDialog();
                         break;
                     }
                 }
                 if (m.x >= okX && m.x <= okX + okW &&
                     m.y >= okY && m.y <= okY + okH)
                 {
+                    for (int i = 0; i < count; ++i)
+                        restoreField(i);
                     shouldApply = true;
                 }
                 else if (m.x >= cancelX && m.x <= cancelX + cancelW &&
